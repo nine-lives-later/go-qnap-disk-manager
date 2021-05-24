@@ -27,7 +27,7 @@ func TestDisksRoundtrip(t *testing.T) {
 		t.Logf("Using LUN/volume name: %v", lunName)
 
 		// create the lun
-		var lun *StorageLUN
+		var lun *LUN
 
 		t.Run(fmt.Sprintf("Test_Storage Pool %v_CreateLUN", pool.PoolID), func(t *testing.T) {
 			lun, err = s.CreateBlockBasedLUN(pool.PoolID, lunName, 1, LUNAllocateMode_Thin, true, 99)
@@ -63,7 +63,7 @@ func TestDisksRoundtrip(t *testing.T) {
 
 		// check the target
 		t.Run(fmt.Sprintf("Test_Storage Pool %v_CheckTarget", pool.PoolID), func(t *testing.T) {
-			lun, err = s.GetStorageLUNByIndex(lun.LUNIndex)
+			lun, err = s.GetLUNByIndex(lun.LUNIndex)
 			if err != nil {
 				t.Fatalf("Failed to get LUN '%v' to iSCSI target '%v': %v", lunName, "xxxx", err)
 			}
@@ -74,7 +74,7 @@ func TestDisksRoundtrip(t *testing.T) {
 
 		// delete the lun
 		t.Run(fmt.Sprintf("Test_Storage Pool %v_DeleteLUN", pool.PoolID), func(t *testing.T) {
-			err := s.DeleteStorageLUN(lun.LUNIndex)
+			err := s.DeleteLUN(lun.LUNIndex)
 			if err != nil {
 				t.Fatalf("Failed to delete LUN '%v': %v", lunName, err)
 			}

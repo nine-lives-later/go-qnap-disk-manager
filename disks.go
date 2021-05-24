@@ -152,7 +152,7 @@ type createBlockBasedLUNResponse struct {
 }
 
 // CreateBlockBasedLUN creates a new block-based volume inside a storage pool and returns the new LUN.
-func (s *QnapSession) CreateBlockBasedLUN(storagePoolID int, name string, capacityGB int, allocateMode LUNAllocateMode, useSSDCache bool, alertThresoldPercent int) (*StorageLUN, error) {
+func (s *QnapSession) CreateBlockBasedLUN(storagePoolID int, name string, capacityGB int, allocateMode LUNAllocateMode, useSSDCache bool, alertThresoldPercent int) (*LUN, error) {
 	var result createBlockBasedLUNResponse
 
 	useSSDCacheStr := "no"
@@ -191,7 +191,7 @@ func (s *QnapSession) CreateBlockBasedLUN(storagePoolID int, name string, capaci
 	for try := 1; try <= 30; try++ {
 		time.Sleep(2 * time.Second) // wait two seconds
 
-		lun, err := s.GetStorageLUNByIndex(result.LUNIndex)
+		lun, err := s.GetLUNByIndex(result.LUNIndex)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get LUN %v: %w", result.LUNIndex, err)
 		}
@@ -203,7 +203,7 @@ func (s *QnapSession) CreateBlockBasedLUN(storagePoolID int, name string, capaci
 	return nil, fmt.Errorf("failed to find LUN %v (timeout)", result.LUNIndex)
 }
 
-type StorageLUN struct {
+type LUN struct {
 	LUNIndex            int    `xml:"LUNIndex"`
 	LUNName             string `xml:"LUNName"`
 	LUNPath             string `xml:"LUNPath"`
@@ -248,13 +248,13 @@ type getStorageLUNsResponse struct {
 	AuthPassed   int    `xml:"authPassed"`
 	ISCSIModel   string `xml:"iSCSIModel"`
 	ISCSILUNList struct {
-		LUNInfo []*StorageLUN `xml:"LUNInfo"`
+		LUNInfo []*LUN `xml:"LUNInfo"`
 	} `xml:"iSCSILUNList"`
 	Result string `xml:"result"`
 }
 
-// GetStorageLUNs retrieves the list of all storage LUNs.
-func (s *QnapSession) GetStorageLUNs() ([]*StorageLUN, error) {
+// GetLUNs retrieves the list of all storage LUNs.
+func (s *QnapSession) GetLUNs() ([]*LUN, error) {
 	var result getStorageLUNsResponse
 
 	res, err := s.conn.NewRequest().
@@ -280,18 +280,18 @@ func (s *QnapSession) GetStorageLUNs() ([]*StorageLUN, error) {
 	return result.ISCSILUNList.LUNInfo, nil
 }
 
-type getStorageLUNByID struct {
+type getLUNByID struct {
 	AuthPassed int    `xml:"authPassed"`
 	ISCSIModel string `xml:"iSCSIModel"`
 	LUNInfo    struct {
-		SingleRow *StorageLUN `xml:"row"`
+		SingleRow *LUN `xml:"row"`
 	} `xml:"LUNInfo"`
 	Result string `xml:"result"`
 }
 
-// GetStorageLUNByIndex retrieves the a storage LUN by its LUN ID (not volume ID!)
-func (s *QnapSession) GetStorageLUNByIndex(lunIndex int) (*StorageLUN, error) {
-	var result getStorageLUNByID
+// GetLUNByIndex retrieves the a storage LUN by its LUN ID (not volume ID!)
+func (s *QnapSession) GetLUNByIndex(lunIndex int) (*LUN, error) {
+	var result getLUNByID
 
 	res, err := s.conn.NewRequest().
 		ExpectContentType("text/xml").
@@ -317,15 +317,15 @@ func (s *QnapSession) GetStorageLUNByIndex(lunIndex int) (*StorageLUN, error) {
 	return result.LUNInfo.SingleRow, nil
 }
 
-type genericStorageLUNResponse struct {
+type genericResponse struct {
 	AuthPassed int    `xml:"authPassed"`
 	ISCSIModel string `xml:"iSCSIModel"`
 	Result     string `xml:"result"`
 }
 
-// DeleteStorageLUN retrieves the a storage LUN by its LUN ID (not volume ID!)
-func (s *QnapSession) DeleteStorageLUN(lunID int) error {
-	var result genericStorageLUNResponse
+// DeleteLUN retrieves the a storage LUN by its LUN ID (not volume ID!)
+func (s *QnapSession) DeleteLUN(lunID int) error {
+	var result genericResponse
 
 	res, err := s.conn.NewRequest().
 		ExpectContentType("text/xml").
@@ -356,9 +356,9 @@ func (s *QnapSession) DeleteStorageLUN(lunID int) error {
 }
 
 // WaitForLUNVolume waits for the volume of the LUN to become ready.
-func (s *QnapSession) WaitForLUNVolume(lunID int) (*StorageLUN, error) {
+func (s *QnapSession) WaitForLUNVolume(lunID int) (*LUN, error) {
 	for try := 1; try <= 30; try++ {
-		lun, err := s.GetStorageLUNByIndex(lunID)
+		lun, err := s.GetLUNByIndex(lunID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get LUN %v: %w", lunID, err)
 		}
@@ -377,7 +377,7 @@ func (s *QnapSession) WaitForLUNVolume(lunID int) (*StorageLUN, error) {
 
 // AssignLUN assigns an existing LUN to an existing iSCSI target
 func (s *QnapSession) AssignLUN(lunIndex int, targetIndex int) error {
-	var result genericStorageLUNResponse
+	var result genericResponse
 
 	res, err := s.conn.NewRequest().
 		ExpectContentType("text/xml").
