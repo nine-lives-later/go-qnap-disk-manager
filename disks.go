@@ -404,3 +404,51 @@ func (s *QnapSession) AssignLUN(lunIndex int, targetIndex int) error {
 
 	return nil
 }
+
+type ISCSITarget struct {
+	TargetIndex  int    `xml:"targetIndex"`
+	TargetName   string `xml:"targetName"`
+	TargetIQN    string `xml:"targetIQN"`
+	TargetAlias  string `xml:"targetAlias"`
+	TargetStatus int    `xml:"targetStatus"`
+}
+
+type getISCSITargetsResponse struct {
+	AuthPassed      int    `xml:"authPassed"`
+	ISCSIModel      string `xml:"iSCSIModel"`
+	ISCSITargetList struct {
+		TargetInfo []*ISCSITarget `xml:"targetInfo"`
+	} `xml:"iSCSITargetList"`
+	Result string `xml:"result"`
+}
+
+// GetISCSITargets retrieves the list of all iSCSI targets.
+func (s *QnapSession) GetISCSITargets() ([]*ISCSITarget, error) {
+	var result getISCSITargetsResponse
+
+	res, err := s.conn.NewRequest().
+		ExpectContentType("text/xml").
+		SetQueryParam("prod", "qts").
+		SetQueryParam("proto", "iscsi").
+		SetQueryParam("target", "lio").
+		SetQueryParam("backend", "dm").
+		SetQueryParam("conf", "ini").
+		SetQueryParam("func", "extra_get").
+		SetQueryParam("targetList", "1").
+		SetResult(&result).
+		Post("cgi-bin/disk/iscsi_portal_setting.cgi")
+	if err != nil {
+		return nil, fmt.Errorf("failed to perform request: %v", err)
+	}
+	if res.StatusCode() != 200 {
+		return nil, fmt.Errorf("failed to perform request: unexpected HTTP status code: %v", res.StatusCode())
+	}
+	if result.AuthPassed != 1 {
+		return nil, fmt.Errorf("failed to perform request: authentication invalid: %v", string(res.Body()))
+	}
+	if result.Result != "0" {
+		return nil, fmt.Errorf("failed to perform request: unexpected result code: %v", result.Result)
+	}
+
+	return result.ISCSITargetList.TargetInfo, nil
+}

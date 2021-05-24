@@ -21,6 +21,18 @@ func TestDisksRoundtrip(t *testing.T) {
 		t.Fatalf("No storage pool found")
 	}
 
+	targets, err := s.GetISCSITargets()
+	if err != nil {
+		t.Fatalf("Failed retrieve iSCSI target list: %v", err)
+	}
+	if len(targets) <= 0 {
+		t.Fatalf("No iSCSI target found")
+	}
+
+	target := targets[0]
+
+	t.Logf("Using iSCSI Target: %v (#%v)", target.TargetIQN, target.TargetIndex)
+
 	for _, pool := range pools {
 		lunName := fmt.Sprintf("UnitTest_%v", 10000+rand.Int31n(89999))
 
@@ -55,7 +67,7 @@ func TestDisksRoundtrip(t *testing.T) {
 
 		// assign the LUN
 		t.Run(fmt.Sprintf("Test_Storage Pool %v_AssignToTarget", pool.PoolID), func(t *testing.T) {
-			err = s.AssignLUN(lun.LUNIndex, 0)
+			err = s.AssignLUN(lun.LUNIndex, target.TargetIndex)
 			if err != nil {
 				t.Fatalf("Failed to assign LUN '%v' to iSCSI target '%v': %v", lunName, "xxxx", err)
 			}
