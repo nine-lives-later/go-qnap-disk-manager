@@ -1,4 +1,4 @@
-module github.com/nine-lives-later/go-qnap-filestation
+module github.com/nine-lives-later/go-qnap-disk-manager
 
 go 1.14
 
